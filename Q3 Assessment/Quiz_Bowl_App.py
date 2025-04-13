@@ -28,6 +28,7 @@ def create_tables():
                         FOREIGN KEY (course_id) REFERENCES courses(course_id))''')
 
     # Create the admin password table (if it doesn't already exist)
+    # Admin Password 123456
     cursor.execute('''CREATE TABLE IF NOT EXISTS admin_password (
                         id INTEGER PRIMARY KEY,
                         password_hash TEXT)''')
