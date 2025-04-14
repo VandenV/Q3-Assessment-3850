@@ -4,8 +4,7 @@ from tkinter import messagebox, ttk
 
 # --------------------------- DATABASE SETUP --------------------------- #
 
-CATEGORIES = ["BMGT 3720", "DS 3520", "DS 3850", "DS 3860", "FIN 3210"]
-
+CATEGORIES = ["BMGT_3720", "DS_3520", "DS_3850", "DS_3860", "FIN_3210"]
 
 class QuizDatabase:
     def __init__(self):
@@ -338,3 +337,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
