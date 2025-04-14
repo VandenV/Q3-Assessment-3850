@@ -4,7 +4,8 @@ from tkinter import messagebox, ttk
 
 # --------------------------- DATABASE SETUP --------------------------- #
 
-CATEGORIES = ["Math", "Science", "History", "Literature", "Geography"]
+CATEGORIES = ["BMGT 3720", "DS 3520", "DS 3850", "DS 3860", "FIN 3210"]
+
 
 class QuizDatabase:
     def __init__(self):
@@ -68,10 +69,6 @@ class QuizDatabase:
     def get_scores(self):
         cursor = self.conn.execute("SELECT * FROM Scores")
         return cursor.fetchall()
-
-    def delete_score(self, score_id):
-        self.conn.execute("DELETE FROM Scores WHERE id = ?", (score_id,))
-        self.conn.commit()
 
 # --------------------------- QUESTION CLASS --------------------------- #
 
@@ -226,18 +223,7 @@ class AdminPanel:
             self.score_tree.insert("", "end", values=(row[0], row[1], row[2], row[3]), tags=(row[4],))
 
         self.score_tree.bind("<Double-1>", self.view_missed_questions)
-        tk.Button(self.master, text="Delete Selected Score", command=self.delete_score).pack()
         tk.Button(self.master, text="Back", command=self.show_menu).pack()
-
-    def delete_score(self):
-        selected = self.score_tree.selection()
-        if not selected:
-            return
-        item = self.score_tree.item(selected)
-        score_id = item['values'][0]
-        self.db.delete_score(score_id)
-        self.view_scores_ui()
-        messagebox.showinfo("Deleted", "Score deleted successfully.")
 
     def view_missed_questions(self, event):
         selected = self.score_tree.selection()
