@@ -4,6 +4,7 @@ from tkinter import messagebox, ttk
 
 # --------------------------- DATABASE SETUP --------------------------- #
 
+# This will set up the necessarry databases if they don't already exist (which they should).
 CATEGORIES = ["BMGT_3720", "DS_3520", "DS_3850", "DS_3860", "FIN_3210"]
 
 class QuizDatabase:
@@ -35,6 +36,7 @@ class QuizDatabase:
         """)
         self.conn.commit()
 
+# This allows user to add questions for each subject.
     def add_question(self, category, question, options, answer):
         try:
             self.conn.execute(f"INSERT INTO {category} (question, option1, option2, option3, option4, answer) VALUES (?, ?, ?, ?, ?, ?)",
@@ -71,6 +73,7 @@ class QuizDatabase:
 
 # --------------------------- QUESTION CLASS --------------------------- #
 
+# This will ask the questions.
 class Question:
     def __init__(self, qtext, options, answer):
         self.qtext = qtext
@@ -82,6 +85,7 @@ class Question:
 
 # --------------------------- ADMIN INTERFACE --------------------------- #
 
+# This is the admin panel for the app.
 class AdminPanel:
     def __init__(self, master, db):
         self.master = master
@@ -244,6 +248,7 @@ class AdminPanel:
 
 # --------------------------- USER INTERFACE --------------------------- #
 
+# This is all the stuff for the student quiz.
 class QuizApp:
     def __init__(self, root, db):
         self.root = root
