@@ -24,15 +24,6 @@ class QuizDatabase:
                     answer TEXT
                 )
             """)
-        self.conn.execute("""
-            CREATE TABLE IF NOT EXISTS Scores (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                category TEXT,
-                score INTEGER,
-                total INTEGER,
-                missed_questions TEXT
-            )
-        """)
         self.conn.commit()
 
     def add_question(self, category, question, options, answer):
@@ -57,20 +48,6 @@ class QuizDatabase:
             SET question=?, option1=?, option2=?, option3=?, option4=?, answer=?
             WHERE id=?
         """, (question, *options, answer, qid))
-        self.conn.commit()
-
-    def save_score(self, category, score, total, missed_questions):
-        missed_str = "|".join(missed_questions)
-        self.conn.execute("INSERT INTO Scores (category, score, total, missed_questions) VALUES (?, ?, ?, ?)",
-                          (category, score, total, missed_str))
-        self.conn.commit()
-
-    def get_scores(self):
-        cursor = self.conn.execute("SELECT * FROM Scores")
-        return cursor.fetchall()
-
-    def delete_score(self, score_id):
-        self.conn.execute("DELETE FROM Scores WHERE id = ?", (score_id,))
         self.conn.commit()
 
 # --------------------------- QUESTION CLASS --------------------------- #
@@ -109,7 +86,6 @@ class AdminPanel:
         self.clear()
         tk.Button(self.master, text="Add Question", command=self.add_question_ui).pack()
         tk.Button(self.master, text="View Questions", command=self.view_questions_ui).pack()
-        tk.Button(self.master, text="View Scores", command=self.view_scores_ui).pack()
 
     def add_question_ui(self):
         self.clear()
@@ -151,7 +127,6 @@ class AdminPanel:
         self.tree = ttk.Treeview(self.master, columns=("ID", "Question", "Answer"), show="headings")
         for col in self.tree["columns"]:
             self.tree.heading(col, text=col)
-            self.tree.column(col, width=200)
         self.tree.pack()
 
         tk.Button(self.master, text="Edit Selected", command=self.edit_question).pack()
@@ -213,46 +188,6 @@ class AdminPanel:
         tk.Button(self.master, text="Save Changes", command=save).pack()
         tk.Button(self.master, text="Cancel", command=self.view_questions_ui).pack()
 
-    def view_scores_ui(self):
-        self.clear()
-        tk.Label(self.master, text="Previous Quiz Scores").pack()
-        self.score_tree = ttk.Treeview(self.master, columns=("ID", "Category", "Score", "Total"), show="headings")
-        for col in self.score_tree["columns"]:
-            self.score_tree.heading(col, text=col)
-            self.score_tree.column(col, width=100, anchor="w")
-        self.score_tree.pack(fill=tk.BOTH, expand=True)
-
-        for row in self.db.get_scores():
-            self.score_tree.insert("", "end", values=(row[0], row[1], row[2], row[3]), tags=(row[4],))
-
-        self.score_tree.bind("<Double-1>", self.view_missed_questions)
-        tk.Button(self.master, text="Delete Selected Score", command=self.delete_score).pack()
-        tk.Button(self.master, text="Back", command=self.show_menu).pack()
-
-    def delete_score(self):
-        selected = self.score_tree.selection()
-        if not selected:
-            return
-        item = self.score_tree.item(selected)
-        score_id = item['values'][0]
-        self.db.delete_score(score_id)
-        self.view_scores_ui()
-        messagebox.showinfo("Deleted", "Score deleted successfully.")
-
-    def view_missed_questions(self, event):
-        selected = self.score_tree.selection()
-        if not selected:
-            return
-        item = self.score_tree.item(selected)
-        missed_data = item['tags'][0]
-        if missed_data:
-            questions = missed_data.split("|")
-            top = tk.Toplevel(self.master)
-            top.title("Missed Questions")
-            tk.Label(top, text="Missed Questions", font=("Arial", 14)).pack(pady=5)
-            for q in questions:
-                tk.Label(top, text=q, wraplength=400, justify="left").pack(anchor="w", padx=10, pady=2)
-
     def clear(self):
         for widget in self.master.winfo_children():
             widget.destroy()
@@ -278,21 +213,9 @@ class QuizApp:
         tk.Button(self.root, text="Begin", command=self.start_quiz).pack()
 
     def start_quiz(self):
-        selected_category = self.cat.get()
-        if not selected_category:
-            messagebox.showwarning("No Category", "Please select a quiz category.")
-            return
-
-        questions_data = self.db.get_questions(selected_category)
-        if not questions_data:
-            messagebox.showinfo("No Questions", "There are no questions in this category yet.")
-            return
-
-        self.category = selected_category
-        self.questions = [Question(row[1], row[2:6], row[6]) for row in questions_data]
+        self.questions = [Question(row[1], row[2:6], row[6]) for row in self.db.get_questions(self.cat.get())]
         self.q_index = 0
         self.score = 0
-        self.missed = []
         self.show_question()
 
     def show_question(self):
@@ -301,6 +224,7 @@ class QuizApp:
             q = self.questions[self.q_index]
             tk.Label(self.root, text=f"Q{self.q_index + 1}: {q.qtext}", wraplength=500, justify="left").pack(pady=10)
             self.selected = tk.StringVar()
+            self.selected.set(None)
             for opt in q.options:
                 tk.Radiobutton(self.root, text=opt, variable=self.selected, value=opt).pack(anchor="w")
             tk.Button(self.root, text="Submit", command=self.submit_answer).pack(pady=10)
@@ -313,18 +237,15 @@ class QuizApp:
             messagebox.showwarning("No Selection", "Please select an answer before submitting.")
             return
 
-        correct_answer = self.questions[self.q_index].answer
         if self.questions[self.q_index].is_correct(selected_answer):
             self.score += 1
             messagebox.showinfo("Correct", "That's correct!")
         else:
-            self.missed.append(self.questions[self.q_index].qtext)
-            messagebox.showinfo("Incorrect", f"Wrong! Correct answer: {correct_answer}")
+            messagebox.showinfo("Incorrect", f"Wrong! Correct answer: {self.questions[self.q_index].answer}")
         self.q_index += 1
         self.show_question()
 
     def show_result(self):
-        self.db.save_score(self.category, self.score, len(self.questions), self.missed)
         self.clear()
         tk.Label(self.root, text=f"Quiz Complete! Your score: {self.score}/{len(self.questions)}").pack()
         tk.Button(self.root, text="Back to Home", command=self.welcome_screen).pack()
